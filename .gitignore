@@ -1,0 +1,27 @@
+node_modules/
+dist/
+out/
+*.vsix
+*.map
+.vscode-test/
+.DS_Store
+
+# 运行时数据目录（用户数据，不要提交）
+data/
+
+# 配置目录（用户配置不提交，但保留 example 文件）
+config/config.yml
+config/*.local.yml
+config/.env
+config/.env.local
+
+# 根目录下的配置文件（兼容旧位置）
+config.yml
+config.local.yml
+.env
+.env.local
+.env.*.local
+
+# 日志文件
+*.log
+logs/

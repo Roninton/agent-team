@@ -1,0 +1,21 @@
+.app-layout {
+  height: 100vh;
+}
+
+.logo {
+  padding: 20px;
+  text-align: center;
+}
+
+.logo h2 {
+  margin: 0;
+  color: #1890ff;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.main-content {
+  padding: 20px;
+  background-color: #f0f2f5;
+  overflow: auto;
+}

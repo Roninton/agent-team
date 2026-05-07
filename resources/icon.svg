@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+  <!-- 背景圆形 -->
+  <circle cx="128" cy="128" r="120" fill="url(#grad)"/>
+  
+  <!-- 渐变定义 -->
+  <defs>
+    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#165DFF" />
+      <stop offset="100%" stop-color="#4080FF" />
+    </linearGradient>
+  </defs>
+  
+  <!-- 三个简化的机器人/AI头像，代表多代理协作 -->
+  <!-- 第一个代理 -->
+  <circle cx="85" cy="100" r="22" fill="white" opacity="0.9"/>
+  <circle cx="78" cy="95" r="3" fill="#165DFF"/>
+  <circle cx="92" cy="95" r="3" fill="#165DFF"/>
+  <path d="M75 110 Q85 118 95 110" stroke="#165DFF" stroke-width="2" fill="none"/>
+  
+  <!-- 第二个代理 -->
+  <circle cx="128" cy="130" r="26" fill="white" opacity="0.95"/>
+  <circle cx="120" cy="125" r="4" fill="#165DFF"/>
+  <circle cx="136" cy="125" r="4" fill="#165DFF"/>
+  <path d="M115 142 Q128 152 141 142" stroke="#165DFF" stroke-width="2.5" fill="none"/>
+  
+  <!-- 第三个代理 -->
+  <circle cx="171" cy="100" r="22" fill="white" opacity="0.9"/>
+  <circle cx="164" cy="95" r="3" fill="#165DFF"/>
+  <circle cx="178" cy="95" r="3" fill="#165DFF"/>
+  <path d="M161 110 Q171 118 181 110" stroke="#165DFF" stroke-width="2" fill="none"/>
+  
+  <!-- 连接线条，表示协作 -->
+  <path d="M107 105 L120 120" stroke="white" stroke-width="2" opacity="0.7" stroke-dasharray="4,2"/>
+  <path d="M149 105 L136 120" stroke="white" stroke-width="2" opacity="0.7" stroke-dasharray="4,2"/>
+</svg>

@@ -1,0 +1,58 @@
+{
+  "name": "acp-platform",
+  "displayName": "多AI协作平台",
+  "description": "基于ACP协议的多AI代理协作Web平台，支持AI群组、任务拆解、并行开发的独立前后端应用",
+  "version": "0.5.0",
+  "author": "Shuyi Zhang",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "acp",
+    "agent",
+    "ai",
+    "multi-agent",
+    "协作",
+    "ai-assistant",
+    "collaboration",
+    "web-app"
+  ],
+  "main": "./src/server/dist/main.js",
+  "private": true,
+  "scripts": {
+    "clean": "rm -rf dist coverage src/server/dist src/client/dist",
+    "dev": "npm run dev:server",
+    "dev:server": "cd src/server && npm run start:dev",
+    "dev:client": "cd src/client && npm run dev",
+    "build": "npm run build:server && npm run build:client",
+    "build:server": "cd src/server && npm run build",
+    "build:client": "cd src/client && npm run build",
+    "start": "cd src/server && npm run start:prod",
+    "lint": "eslint src/client/src src/server/src --ext .ts,.tsx",
+    "lint:fix": "eslint src/client/src src/server/src --ext .ts,.tsx --fix",
+    "test": "npm run test:client && npm run test:server && npm run test:shared",
+    "test:client": "cd src/client && npm run test",
+    "test:server": "cd src/server && npm run test",
+    "test:shared": "cd src/shared && vitest run",
+    "test:watch": "vitest watch",
+    "test:coverage": "vitest run --coverage",
+    "install:all": "npm install && cd src/server && npm install && cd ../client && npm install"
+  },
+  "workspaces": [
+    "src/server",
+    "src/client"
+  ],
+  "devDependencies": {
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
+    "@types/node": "^20.0.0",
+    "@typescript-eslint/eslint-plugin": "^7.0.0",
+    "@typescript-eslint/parser": "^7.0.0",
+    "@vitest/coverage-v8": "^1.0.0",
+    "eslint": "^8.50.0",
+    "jsdom": "^29.1.1",
+    "typescript": "^5.3.0",
+    "vitest": "^1.0.0"
+  }
+}
