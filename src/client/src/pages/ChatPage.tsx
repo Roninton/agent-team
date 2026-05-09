@@ -55,9 +55,11 @@ const ChatPage = () => {
 
   const handleSend = () => {
     if (!inputText.trim()) {return;}
-
+    
+    // 生成可预估的消息ID：会话ID + 角色 + 当前消息索引
+    const messageIndex = messages.length;
     const newMessage: Message = {
-      id: Date.now().toString(),
+      id: `${activeSessionId}-user-${messageIndex}`,
       content: inputText,
       role: 'user',
       timestamp: new Date(),
@@ -69,7 +71,7 @@ const ChatPage = () => {
     // 模拟代理回复
     setTimeout(() => {
       const replyMessage: Message = {
-        id: (Date.now() + 1).toString(),
+        id: `${activeSessionId}-agent-${messageIndex}`,
         content: `收到你的问题："${inputText}"，我正在为你解答...`,
         role: 'agent',
         agentName: '代码专家',
@@ -125,6 +127,8 @@ const ChatPage = () => {
               {messages.map(message => (
                 <div
                   key={message.id}
+                  id={`message-${message.id}`}
+                  className={`message-item message-${message.role}`}
                   style={{
                     display: 'flex',
                     justifyContent: message.role === 'user' ? 'flex-end' : 'flex-start',

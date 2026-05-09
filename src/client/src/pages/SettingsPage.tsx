@@ -1,6 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, List, Button, Form, Input, Modal, Switch, message } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, PlayCircleOutlined, StopOutlined } from '@ant-design/icons';
+import { agentApi } from '../api/agent.api';
+import type { ApiResponse, PagedResult } from '../api/config';
 
 interface AgentConfig {
   id: string
@@ -13,39 +15,66 @@ interface AgentConfig {
 }
 
 const SettingsPage = () => {
-  const [agents, setAgents] = useState<AgentConfig[]>([
-    {
-      id: '1',
-      name: '代码专家',
-      type: 'openai',
-      command: 'npx',
-      args: '-y @agent/code-expert',
-      rateLimit: 5,
-      enabled: true,
-    },
-    {
-      id: '2',
-      name: '文案专家',
-      type: 'openai',
-      command: 'npx',
-      args: '-y @agent/write-expert',
-      rateLimit: 10,
-      enabled: true,
-    },
-    {
-      id: '3',
-      name: '数据分析专家',
-      type: 'local',
-      command: 'python',
-      args: './agents/data_analyst.py',
-      rateLimit: 3,
-      enabled: false,
-    }
-  ]);
-
+  const [agents, setAgents] = useState<AgentConfig[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingAgent, setEditingAgent] = useState<AgentConfig | null>(null);
   const [form] = Form.useForm();
+
+  // 页面加载时从后端获取代理列表
+  useEffect(() => {
+    loadAgents();
+  }, []);
+
+  const loadAgents = async () => {
+    try {
+      const response = await agentApi.getAgents();
+      if (response.success) {
+        // 处理后端返回的数据结构
+        const agentList = Array.isArray(response.data) ? response.data : (response.data?.list || []);
+        setAgents(agentList.map((item: any) => ({
+          id: item.id,
+          name: item.config?.name || item.name,
+          type: item.config?.env?.AGENT_TYPE || item.type || 'local',
+          command: item.config?.command || item.command,
+          args: item.config?.args?.join(' ') || item.args || '',
+          rateLimit: item.config?.rateLimit || item.rateLimit || 5,
+          enabled: item.status === 'running' || item.enabled || false,
+        })));
+      }
+    } catch (error) {
+      console.error('加载代理列表失败:', error);
+      // 加载失败时使用默认代理作为后备
+      setAgents([
+        {
+          id: '1',
+          name: '代码专家',
+          type: 'openai',
+          command: 'npx',
+          args: '-y @agent/code-expert',
+          rateLimit: 5,
+          enabled: true,
+        },
+        {
+          id: '2',
+          name: '文案专家',
+          type: 'openai',
+          command: 'npx',
+          args: '-y @agent/write-expert',
+          rateLimit: 10,
+          enabled: true,
+        },
+        {
+          id: '3',
+          name: '数据分析专家',
+          type: 'local',
+          command: 'python',
+          args: './agents/data_analyst.py',
+          rateLimit: 3,
+          enabled: false,
+        }
+      ]);
+    }
+  };
 
   const handleAdd = () => {
     setEditingAgent(null);
@@ -63,9 +92,16 @@ const SettingsPage = () => {
     Modal.confirm({
       title: '确认删除',
       content: '确定要删除这个代理配置吗？',
-      onOk: () => {
-        setAgents(agents.filter(a => a.id !== id));
-        message.success('删除成功');
+      onOk: async () => {
+        try {
+          const response = await agentApi.deleteAgent(id);
+          if (response.success) {
+            setAgents(agents.filter(a => a.id !== id));
+            message.success('删除成功');
+          }
+        } catch (error) {
+          message.error('删除失败');
+        }
       }
     });
   };
@@ -75,31 +111,73 @@ const SettingsPage = () => {
     message.success(enabled ? '代理已启用' : '代理已禁用');
   };
 
-  const handleSave = () => {
-    form.validateFields().then(values => {
+  const handleSave = async () => {
+    try {
+      const values = await form.validateFields();
       if (editingAgent) {
-        setAgents(agents.map(a => a.id === editingAgent.id ? { ...a, ...values } : a));
-        message.success('修改成功');
+        // 调用更新代理API
+        const response = await agentApi.updateAgent(editingAgent.id, {
+          name: values.name,
+          command: values.command,
+          args: values.args ? values.args.split(' ') : [],
+          rateLimit: values.rateLimit,
+        });
+        if (response.success) {
+          setAgents(agents.map(a => a.id === editingAgent.id ? { ...a, ...values } : a));
+          message.success('修改成功');
+        }
       } else {
-        const newAgent: AgentConfig = {
-          ...values,
-          id: Date.now().toString(),
-        };
-        setAgents([...agents, newAgent]);
-        message.success('添加成功');
+        // 调用创建代理API
+        const response = await agentApi.createAgent({
+          name: values.name,
+          command: values.command,
+          args: values.args ? values.args.split(' ') : [],
+          rateLimit: values.rateLimit,
+        });
+        if (response.success) {
+          const newAgent: AgentConfig = {
+            id: response.data?.id || Date.now().toString(),
+            name: values.name,
+            type: 'local',
+            command: values.command,
+            args: values.args || '',
+            rateLimit: values.rateLimit,
+            enabled: response.data?.status === 'running',
+          };
+          setAgents([...agents, newAgent]);
+          message.success('添加成功');
+        }
       }
       setIsModalOpen(false);
-    });
+    } catch (error) {
+      message.error(editingAgent ? '修改失败' : '添加失败');
+    }
   };
 
-  const handleStart = (agent: AgentConfig) => {
-    message.success(`正在启动代理 ${agent.name}...`);
-    // TODO: 调用后端API启动代理
+  const handleStart = async (agent: AgentConfig) => {
+    try {
+      message.loading({ content: `正在启动代理 ${agent.name}...`, key: 'start' });
+      const response = await agentApi.startAgent(agent.id);
+      if (response.success) {
+        setAgents(agents.map(a => a.id === agent.id ? { ...a, enabled: true } : a));
+        message.success({ content: `代理 ${agent.name} 启动成功`, key: 'start' });
+      }
+    } catch (error) {
+      message.error({ content: `代理 ${agent.name} 启动失败`, key: 'start' });
+    }
   };
 
-  const handleStop = (agent: AgentConfig) => {
-    message.success(`正在停止代理 ${agent.name}...`);
-    // TODO: 调用后端API停止代理
+  const handleStop = async (agent: AgentConfig) => {
+    try {
+      message.loading({ content: `正在停止代理 ${agent.name}...`, key: 'stop' });
+      const response = await agentApi.stopAgent(agent.id);
+      if (response.success) {
+        setAgents(agents.map(a => a.id === agent.id ? { ...a, enabled: false } : a));
+        message.success({ content: `代理 ${agent.name} 停止成功`, key: 'stop' });
+      }
+    } catch (error) {
+      message.error({ content: `代理 ${agent.name} 停止失败`, key: 'stop' });
+    }
   };
 
   return (
@@ -187,7 +265,6 @@ const SettingsPage = () => {
         onOk={handleSave}
         onCancel={() => setIsModalOpen(false)}
         width={600}
-        id="settings-agent-modal"
       >
         <Form form={form} layout="vertical">
           <Form.Item

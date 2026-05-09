@@ -1,6 +1,8 @@
 import { Test, TestingModule } from "@nestjs/testing"
 import { AgentService } from '../agent.service'
+import { ConfigService } from '../../../config/config.service'
 import * as cp from 'child_process'
+import * as path from 'path'
 import type { AgentConfig } from '../types/agent.types'
 
 jest.mock('child_process', () => ({
@@ -39,7 +41,7 @@ describe('AgentService', () => {
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [AgentService],
+      providers: [AgentService, ConfigService],
     }).compile()
 
     service = module.get<AgentService>(AgentService)
@@ -55,6 +57,31 @@ describe('AgentService', () => {
     }
 
     jest.clearAllMocks()
+  })
+
+  describe('路径解析逻辑', () => {
+    it('应该正确解析默认的agents目录路径', () => {
+      const expectedPath = path.resolve(process.cwd(), '../..', './.teamagents/data', 'agents')
+      expect(service['agentsDir']).toBe(expectedPath)
+    })
+
+    it('应该正确解析通过环境变量指定的自定义数据目录', async () => {
+      // 保存原来的环境变量
+      const originalDataRoot = process.env.ACP_DATA_ROOT
+      process.env.ACP_DATA_ROOT = './custom-data'
+
+      // 重新创建service实例，加载新的配置
+      const module: TestingModule = await Test.createTestingModule({
+        providers: [AgentService, ConfigService],
+      }).compile()
+      const customService = module.get<AgentService>(AgentService)
+
+      const expectedPath = path.resolve(process.cwd(), '../..', './custom-data', 'agents')
+      expect(customService['agentsDir']).toBe(expectedPath)
+
+      // 恢复环境变量
+      process.env.ACP_DATA_ROOT = originalDataRoot
+    })
   })
 
   afterEach(() => {

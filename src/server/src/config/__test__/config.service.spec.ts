@@ -44,7 +44,7 @@ describe('ConfigService', () => {
 
     it('应该正确读取默认数据库路径', () => {
       const dbPath = service.get('database.path')
-      expect(dbPath).toBe('./data/db/acp.sqlite')
+      expect(dbPath).toBe('../../.teamagents/data/db/acp.sqlite')
     })
 
     it('应该正确读取默认最大代理数 10', () => {

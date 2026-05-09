@@ -1,15 +1,91 @@
-import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common'
+import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common'
 import * as cp from 'child_process'
+import * as fs from 'fs/promises'
+import * as path from 'path'
+import { ConfigService } from '../../config/config.service'
 import type { AgentConfig, AgentInstance, AgentStatus } from './types/agent.types'
 import { CreateAgentDto } from './dto/create-agent.dto'
 
 @Injectable()
-export class AgentService implements OnModuleDestroy {
+export class AgentService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(AgentService.name)
   private readonly agents: Map<string, AgentInstance> = new Map()
   private readonly processes: Map<string, cp.ChildProcess> = new Map()
   private readonly DEFAULT_RATE_LIMIT = 5 // 5 messages per minute
   private readonly DEFAULT_RATE_WINDOW = 60 * 1000 // 1 minute in ms
+  private agentsDir: string
+
+  constructor(private configService: ConfigService) {
+    const dataRoot = this.configService.get<string>('data.root') || './.teamagents/data';
+    // 服务运行在src/server目录，需要回退两级到项目根目录，再拼接数据路径
+    this.agentsDir = path.resolve(process.cwd(), '../..', dataRoot, 'agents');
+  }
+
+  /**
+   * Initialize on module start: load saved agents
+   */
+  async onModuleInit() {
+    try {
+      // Create agents directory if not exists
+      await fs.mkdir(this.agentsDir, { recursive: true })
+      
+      // Read all agent config files
+      const files = await fs.readdir(this.agentsDir)
+      for (const file of files) {
+        if (file.endsWith('.json')) {
+          try {
+            const configPath = path.join(this.agentsDir, file)
+            const configContent = await fs.readFile(configPath, 'utf-8')
+            const config: AgentConfig = JSON.parse(configContent)
+            
+            // Auto start saved agents
+            await this.startAgent(config)
+            this.logger.log(`Loaded agent ${config.id} from disk`)
+          } catch (error) {
+            const errMsg = error instanceof Error ? error.message : String(error)
+            this.logger.error(`Failed to load agent config ${file}: ${errMsg}`)
+          }
+        }
+      }
+    } catch (error) {
+      const errMsg = error instanceof Error ? error.message : String(error)
+      this.logger.error(`Failed to initialize agents directory: ${errMsg}`)
+    }
+  }
+
+  /**
+   * Save agent config to disk
+   */
+  private async saveAgentConfig(config: AgentConfig): Promise<void> {
+    try {
+      this.logger.log(`Saving agent config: ${config.id} to ${this.agentsDir}`);
+      await fs.mkdir(this.agentsDir, { recursive: true })
+      const configPath = path.join(this.agentsDir, `${config.id}.json`)
+      this.logger.log(`Writing to file: ${configPath}`);
+      await fs.writeFile(configPath, JSON.stringify(config, null, 2), 'utf-8')
+      this.logger.log(`Successfully saved agent config: ${configPath}`);
+    } catch (error) {
+      const errMsg = error instanceof Error ? error.message : String(error)
+      this.logger.error(`Failed to save agent config ${config.id}: ${errMsg}`)
+      throw error
+    }
+  }
+
+  /**
+   * Delete agent config from disk
+   */
+  private async deleteAgentConfig(agentId: string): Promise<void> {
+    try {
+      const configPath = path.join(this.agentsDir, `${agentId}.json`)
+      await fs.unlink(configPath)
+    } catch (error) {
+      if (error instanceof Error && (error as NodeJS.ErrnoException).code !== 'ENOENT') { // Ignore if file doesn't exist
+        const errMsg = error.message
+        this.logger.error(`Failed to delete agent config ${agentId}: ${errMsg}`)
+        throw error
+      }
+    }
+  }
 
   /**
    * Get all agent instances
@@ -53,6 +129,8 @@ export class AgentService implements OnModuleDestroy {
       rateLimitWindow: createAgentDto.rateLimitWindow || this.DEFAULT_RATE_WINDOW,
     }
 
+    // Save config to disk before starting
+    await this.saveAgentConfig(config)
     await this.startAgent(config)
     return this.agents.get(id)!
   }
@@ -238,6 +316,8 @@ export class AgentService implements OnModuleDestroy {
       await this.stopAgent(id)
     }
     this.agents.delete(id)
+    // Delete config from disk
+    await this.deleteAgentConfig(id)
   }
 
   /**

@@ -32,7 +32,10 @@ export class AgentController {
     try {
       return await this.agentService.create(createAgentDto)
     } catch (err) {
-      throw new HttpException(err.message, HttpStatus.BAD_REQUEST)
+      if (err instanceof Error) {
+        throw new HttpException(err.message, HttpStatus.BAD_REQUEST)
+      }
+      throw new HttpException('创建代理失败，请检查配置', HttpStatus.BAD_REQUEST)
     }
   }
 
@@ -46,7 +49,10 @@ export class AgentController {
       await this.agentService.startAgent(agent.config)
       return { success: true, message: `Agent ${id} started` }
     } catch (err) {
-      throw new HttpException(err.message, HttpStatus.BAD_REQUEST)
+      if (err instanceof Error) {
+        throw new HttpException(err.message, HttpStatus.BAD_REQUEST)
+      }
+      throw new HttpException('启动代理失败', HttpStatus.BAD_REQUEST)
     }
   }
 
@@ -56,7 +62,10 @@ export class AgentController {
       await this.agentService.stopAgent(id)
       return { success: true, message: `Agent ${id} stopped` }
     } catch (err) {
-      throw new HttpException(err.message, HttpStatus.BAD_REQUEST)
+      if (err instanceof Error) {
+        throw new HttpException(err.message, HttpStatus.BAD_REQUEST)
+      }
+      throw new HttpException('停止代理失败', HttpStatus.BAD_REQUEST)
     }
   }
 
@@ -66,7 +75,10 @@ export class AgentController {
       const agentId = await this.agentService.restartAgent(id)
       return { success: true, message: `Agent ${id} restarted`, agentId }
     } catch (err) {
-      throw new HttpException(err.message, HttpStatus.BAD_REQUEST)
+      if (err instanceof Error) {
+        throw new HttpException(err.message, HttpStatus.BAD_REQUEST)
+      }
+      throw new HttpException('重启代理失败', HttpStatus.BAD_REQUEST)
     }
   }
 
@@ -76,7 +88,10 @@ export class AgentController {
       await this.agentService.remove(id)
       return { success: true, message: `Agent ${id} deleted` }
     } catch (err) {
-      throw new HttpException(err.message, HttpStatus.BAD_REQUEST)
+      if (err instanceof Error) {
+        throw new HttpException(err.message, HttpStatus.BAD_REQUEST)
+      }
+      throw new HttpException('删除代理失败', HttpStatus.BAD_REQUEST)
     }
   }
 }

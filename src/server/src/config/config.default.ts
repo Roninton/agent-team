@@ -10,16 +10,16 @@ export const DEFAULT_CONFIG = {
   },
 
   database: {
-    path: './data/db/acp.sqlite',
+    path: '../../.teamagents/data/db/acp.sqlite',
   },
 
   log: {
-    path: './data/logs',
+    path: '../../.teamagents/data/logs',
     level: 'info' as 'debug' | 'info' | 'warn' | 'error',
   },
 
   data: {
-    root: './data',
+    root: './.teamagents/data',
   },
 
   config: {
@@ -28,7 +28,7 @@ export const DEFAULT_CONFIG = {
 
   agent: {
     maxInstances: 10,
-    workDir: './data/agents',
+    workDir: '../../.teamagents/data/agents',
   },
 
   advanced: {

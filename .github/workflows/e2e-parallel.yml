@@ -1,0 +1,81 @@
+name: 分布式E2E测试
+
+on:
+  workflow_dispatch:
+    inputs:
+      shards:
+        description: '测试分片数量'
+        required: true
+        default: '3'
+        type: choice
+        options:
+        - '2'
+        - '3'
+        - '4'
+        - '5'
+
+jobs:
+  e2e-test-shard:
+    name: E2E 测试分片 ${{ matrix.shard }}/${{ inputs.shards }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4, 5]
+        exclude:
+          - shard: ${{ inputs.shards == '2' && 3 || (inputs.shards == '3' && 4 || (inputs.shards == '4' && 5 || 99)) }}
+          - shard: ${{ inputs.shards == '2' && 4 || (inputs.shards == '3' && 5 || 99) }}
+          - shard: ${{ inputs.shards == '2' && 5 || 99 }}
+
+    steps:
+    - name: 检出代码
+      uses: actions/checkout@v4
+
+    - name: 设置 Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '22'
+        cache: 'npm'
+
+    - name: 安装依赖
+      run: npm ci && cd src/server && npm ci && cd ../client && npm ci && cd ../e2e && npm ci
+
+    - name: 安装 Playwright 浏览器
+      run: cd e2e && npm run install:browsers
+
+    - name: 安装系统依赖
+      run: npx playwright install-deps chromium
+
+    - name: 运行分片测试
+      run: cd e2e && SHARD="${{ matrix.shard }}/${{ inputs.shards }}" npm run test:shard
+      env:
+        CI: true
+        BASE_URL: http://localhost:5173
+        API_URL: http://localhost:3001/api
+
+    - name: 上传测试结果
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: test-results-shard-${{ matrix.shard }}
+        path: e2e/test-results/
+        retention-days: 7
+
+  merge-results:
+    name: 合并测试结果
+    runs-on: ubuntu-latest
+    needs: e2e-test-shard
+    if: always()
+    steps:
+    - name: 下载所有测试结果
+      uses: actions/download-artifact@v4
+      with:
+        path: all-results
+
+    - name: 显示合并后的结果
+      run: |
+        echo "所有分片测试完成"
+        echo "通过: $(find all-results -name "*.json" | xargs grep -l "status.*passed" | wc -l)"
+        echo "失败: $(find all-results -name "*.json" | xargs grep -l "status.*failed" | wc -l)"
+        echo "跳过: $(find all-results -name "*.json" | xargs grep -l "status.*skipped" | wc -l)"

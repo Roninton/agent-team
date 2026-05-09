@@ -55,14 +55,18 @@ export class ConfigLoader {
     const envConfig: Partial<AppConfig> = {}
 
     // Server
+    const serverConfig: Partial<AppConfig['server']> = {}
     if (process.env.ACP_SERVER_PORT) {
-      envConfig.server = { port: Number(process.env.ACP_SERVER_PORT) }
+      serverConfig.port = Number(process.env.ACP_SERVER_PORT)
     }
     if (process.env.ACP_SERVER_HOST) {
-      envConfig.server = { ...envConfig.server, host: process.env.ACP_SERVER_HOST }
+      serverConfig.host = process.env.ACP_SERVER_HOST
     }
     if (process.env.ACP_CORS_ORIGIN) {
-      envConfig.server = { ...envConfig.server, corsOrigin: process.env.ACP_CORS_ORIGIN }
+      serverConfig.corsOrigin = process.env.ACP_CORS_ORIGIN
+    }
+    if (Object.keys(serverConfig).length > 0) {
+      envConfig.server = serverConfig as AppConfig['server']
     }
 
     // Database
@@ -71,14 +75,18 @@ export class ConfigLoader {
     }
 
     // Log
+    const logConfig: Partial<AppConfig['log']> = {}
     if (process.env.ACP_LOG_PATH) {
-      envConfig.log = { path: process.env.ACP_LOG_PATH }
+      logConfig.path = process.env.ACP_LOG_PATH
     }
     if (process.env.ACP_LOG_LEVEL) {
       const level = process.env.ACP_LOG_LEVEL.toLowerCase() as AppConfig['log']['level']
       if (['debug', 'info', 'warn', 'error'].includes(level)) {
-        envConfig.log = { ...envConfig.log, level }
+        logConfig.level = level
       }
+    }
+    if (Object.keys(logConfig).length > 0) {
+      envConfig.log = logConfig as AppConfig['log']
     }
 
     // Data
@@ -87,11 +95,15 @@ export class ConfigLoader {
     }
 
     // Agent
+    const agentConfig: Partial<AppConfig['agent']> = {}
     if (process.env.ACP_MAX_AGENTS) {
-      envConfig.agent = { maxInstances: Number(process.env.ACP_MAX_AGENTS) }
+      agentConfig.maxInstances = Number(process.env.ACP_MAX_AGENTS)
     }
     if (process.env.ACP_AGENT_WORKDIR) {
-      envConfig.agent = { ...envConfig.agent, workDir: process.env.ACP_AGENT_WORKDIR }
+      agentConfig.workDir = process.env.ACP_AGENT_WORKDIR
+    }
+    if (Object.keys(agentConfig).length > 0) {
+      envConfig.agent = agentConfig as AppConfig['agent']
     }
 
     return envConfig

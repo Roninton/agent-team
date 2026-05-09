@@ -100,6 +100,101 @@ npm run dev:client
 
 ---
 
+## 🛠️ 自定义代理开发
+
+### 编写一个简单的测试代理
+
+您可以轻松创建自己的ACP代理，以下是一个最简单的echo代理示例：
+
+1. 创建新文件 `agents/echo_agent.py`：
+```python
+#!/usr/bin/env python3
+import sys
+import json
+
+def main():
+    print("Echo代理已启动，等待输入...", file=sys.stderr)
+    
+    while True:
+        line = sys.stdin.readline()
+        if not line:
+            break
+            
+        try:
+            request = json.loads(line)
+            if request.get('type') == 'message':
+                content = request.get('content', '')
+                response = {
+                    "type": "message",
+                    "content": f"收到你的消息：{content}\n我是Echo测试代理，你说的我都会原样返回！",
+                    "metadata": {
+                        "agent": "echo",
+                        "version": "1.0.0"
+                    }
+                }
+                print(json.dumps(response), flush=True)
+        except Exception as e:
+            print(f"处理消息出错：{e}", file=sys.stderr)
+
+if __name__ == "__main__":
+    main()
+```
+
+2. 给文件添加执行权限：
+```bash
+chmod +x agents/echo_agent.py
+```
+
+### 对接自定义代理
+
+在平台中添加您的自定义代理：
+1. 进入「设置」页面，点击「添加代理」按钮
+2. 填写代理信息：
+   - 代理名称：Echo测试代理
+   - 代理类型：选择「本地命令」
+   - 执行命令：`python agents/echo_agent.py`
+   - 限流设置：根据需要设置，建议不低于1条/分钟
+3. 点击「保存」，然后点击「启动」按钮即可使用
+
+### 代理协议说明
+ACP代理通过标准输入输出进行通信：
+- 平台发送JSON格式的消息到代理的stdin
+- 代理处理完成后将JSON响应输出到stdout
+- 日志和调试信息请输出到stderr，不会影响正常通信
+
+---
+
+## ❓ 常见问题排查
+
+### 启动问题
+**Q：后端启动报错 "Cannot find module './dist/main'"**
+A：请先执行一次编译：`npm run build:server`，然后再启动开发服务。
+
+**Q：前端启动后页面空白，控制台有CORS错误**
+A：确认后端服务是否正常启动，检查`config/config.yml`中的`corsOrigin`配置是否包含`http://localhost:5173`。
+
+**Q：启动代理时报错 "command not found"**
+A：检查代理执行命令是否正确，路径是否存在，相关依赖是否已安装。
+
+### 使用问题
+**Q：发送消息后没有回复**
+A：1. 确认代理是否已启动（设置页面状态为运行中）
+2. 检查代理日志：查看终端输出是否有报错信息
+3. 确认代理的输入输出格式是否符合ACP协议规范
+
+**Q：代理启动后马上退出**
+A：1. 检查代理命令是否正确，是否有执行权限
+2. 查看代理的错误日志，确认是否缺少依赖或配置
+3. 尝试手动在终端执行代理命令，看是否能正常运行
+
+### 性能问题
+**Q：多个代理同时运行时响应变慢**
+A：1. 检查系统资源占用，CPU和内存是否足够
+2. 调整每个代理的限流配置，避免同时处理过多请求
+3. 可以考虑将频繁使用的代理部署到独立的服务器上
+
+---
+
 ## ✅ 验证所有功能
 
 按照以下顺序快速走一遍，确认平台正常工作：
